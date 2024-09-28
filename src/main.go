@@ -1,23 +1,26 @@
 package main
 
-import "fmt"
-
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+func showDeck(w http.ResponseWriter, r *(http.Request){
+	webCards := newDeck()
+	webCards.
+}
 func main() {
 	cards := newDeck()
-	fmt.Println("**********Full deck**********")
-	cards.print()
-	fmt.Println("********************")
 
-	hand1, hand2 := deal(cards, 14)
 
-	fmt.Println("**********Player 1 Hand*********")
-	hand1.print()
-	fmt.Println("********************")
-	fmt.Println("**********Player 1 Hand**********")
-	hand2.print()
-	fmt.Printf("********************")
+	http.HandleFunc("/", showDeck())
+		fmt.Println("Number of Bytes Written: %v", n)
 
-	hand2.saveToFile("hand2.cards")
-	hand1.saveToFile("hand1.cards")
+		serverErr := http.ListenAndServe(":9999", nil)
+		if serverErr != nil {
+			log.Fatal(serverErr)
+		}
+
+	})
 
 }

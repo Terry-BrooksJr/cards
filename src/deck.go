@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -54,8 +55,9 @@ func (r Rank) String() string {
 
 // Card represents a single playing card, with both a suit and a value.
 type Card struct {
-	suit Suit
-	rank Rank
+	suit  Suit
+	rank  Rank
+	owner player
 }
 
 // Deck is a custom type representing a map of Cards.
@@ -82,30 +84,17 @@ func newDeck() Deck {
 	return newDeck
 }
 
-// deal is a function that splits a deck into two parts based on the handSize:
-// The first part is a hand of cards, and the second part is the remaining deck.
-// Since Deck is now a map, we'll return two maps representing the hand and the remaining deck.
-func deal(d Deck, handSize int) (Deck, Deck) {
-	hand := make(Deck)
-	remaining := make(Deck)
-
-	counter := 0
-	for key, card := range d {
-		if counter < handSize {
-			hand[key] = card
-		} else {
-			remaining[key] = card
-		}
-		counter++
-	}
-
-	return hand, remaining
-}
-
-// print is a receiver function that prints each card in the deck.
-func (d Deck) print() {
+// Print is a receiver function that prints each card in the deck.
+func (d Deck) Print() {
 	for key, card := range d {
 		fmt.Printf("Card %d: %s of %s\n", key, card.rank.String(), card.suit.String())
+	}
+}
+
+// PrintToWeb is a receiver function that prints each card in the deck designed for to the required parameters of a web request.
+func (d Deck) PrintToWeb(w http.ResponseWriter, r *http.Request) {
+	for key, card := range d {
+		fmt.Fprintf(w, "Card %d: %s of %s\n", key, card.rank.String(), card.suit.String())
 	}
 }
 
@@ -125,9 +114,9 @@ func (d Deck) saveToFile(fileName string) error {
 	return os.WriteFile(fileName, []byte(d.toString()), 0666)
 }
 
-// newDeckFromFile reads a Deck from a file and recreates it.
+// NewDeckFromFile reads a Deck from a file and recreates it.
 // It reads the file's content, converts it to a string, and then splits it to recreate the Deck.
-func newDeckFromFile(filename string) Deck {
+func NewDeckFromFile(filename string) Deck {
 	deckInBytes, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal("Error:", err)
@@ -180,6 +169,13 @@ func parseCardValue(valueStr string) Rank {
 	}
 
 }
+func deletePlayer(slice []player, index int) []player {
+	return append(slice[:index], slice[index+1:]...)
+}
+
+func deleteHand(slice []Hand, index int) []Hand {
+	return append(slice[:index], slice[index+1:]...)
+}
 
 // Helper function to parse suit from string to Suit.
 func parseSuit(suitStr string) Suit {
@@ -222,4 +218,66 @@ func (d Deck) shuffle() {
 	for key, card := range shuffledDeck {
 		d[key] = card
 	}
+}
+
+type Hand struct {
+	player    player
+	handCards [13]Card
+}
+
+func (h Hand) ShowHand() {
+	for key, card := range h.handCards {
+		fmt.Printf("Card %d: %s of %s\n", key, card.rank.String(), card.suit.String())
+	}
+}
+
+// deal is a function that splits a deck into two parts based on the handSize:
+// The first part is a hand of cards, and the second part is the remaining deck.
+// Since Deck is now a map, we'll return two maps representing the hand and the remaining deck.
+func (d Deck, P1 player, P2 player, P3 player, P4 player) deal(Hand, Hand, Hand, Hand) {
+	var H1 Hand
+	var H2 Hand
+	var H3 Hand
+	var H4 Hand
+	handowners := []player{P1, P2, P3, P4}
+	availableHands := []Hand{H1, H2, H3, H4}
+	for len(handowners) > 0 {
+		rand.Seed(time.Now().UnixNano())
+		randomIndex := rand.Intn(len(handowners))
+		for len(availableHands) > 0 {
+			availableHands[randomIndex].player = *handowners[randomIndex].cards
+			handowners = deletePlayer(handowners, randomIndex)
+			availableHands = deleteHand(availableHands, randomIndex)
+		}
+	}
+	counter := 52
+	for _, card := range d {
+		if counter != 0 {
+			for i := 0; i <= 52; i++ {
+				if H1.handCards[12].rank.String() == " " {
+					H1.handCards[i] = card
+				} else if H1.handCards[12].rank.String() == " " {
+					if i >= 12 && i != 12 {
+						i = 0
+					}
+					H2.handCards[i] = card
+				} else if H3.handCards[12].rank.String() == " " {
+					if i >= 12 && i != 12 {
+						i = 0
+					}
+					H3.handCards[i] = card
+				} else if H4.handCards[12].rank.String() == " " {
+					if i >= 12 && i != 12 {
+						i = 0
+					}
+					H4.handCards[i] = card
+				}
+
+				counter--
+			}
+
+		}
+	}
+	return H1, H2, H3, H4
+
 }
